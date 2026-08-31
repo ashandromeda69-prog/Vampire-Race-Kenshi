@@ -1,0 +1,13 @@
+# Kenshi game data is binary. Without this, a contributor cloning with
+# core.autocrlf=true can silently corrupt every one of these files on push.
+*.mod    binary
+*.base   binary
+*.level  binary
+*.zone   binary
+*.mesh   binary
+*.dds    binary
+*.phs    binary
+
+*.md     text eol=lf
+*.py     text eol=lf
+*.txt    text eol=lf
