@@ -2,12 +2,14 @@
 
 Diagnosis and repair of **Vampire Race — Blood Feeding v3.5** (commit `9e1bab2`).
 Everything below was derived by parsing the binary `.mod`, `.level` and `.zone`
-files record by record. The rebuilt mod lives in `Vampire Race - Blood Feeding/`;
-the untouched original is preserved in `original-v3.5/`.
+files record by record — first the original, then the repair itself, which was
+re-audited and corrected in a second pass. The rebuilt mod (v3.6.1) lives in
+`Vampire Race - Blood Feeding/`; the untouched original is in `original-v3.5/`.
 
-> **Not yet tested in-game.** Every change is verified structurally — the file
-> parses, round-trips byte-exactly, and passes the assertions listed at the bottom.
-> Nobody has launched Kenshi with it. Test on a clean install before releasing.
+> **Not yet tested in-game.** Every change is verified structurally — the files
+> parse, round-trip byte-exactly, and pass the assertions listed at the bottom.
+> Nobody has launched Kenshi with this yet. Test on a clean install before
+> releasing.
 
 ---
 
@@ -16,14 +18,12 @@ the untouched original is preserved in `original-v3.5/`.
 > "When they are attempting to access the site it is not allowing them to further
 > play, things aren't loading."
 
-Reproduced from first principles. Both custom starts spawned the player **inside
-Coven City**, the one location that cannot load without the author's personal
-install of ~120 other mods. New Game → infinite load.
+Reproduced from first principles: both custom starts spawned the player **inside
+Coven City**, the one location that cannot exist without the author's personal
+install of ~120 other mods and world data exported from a live save. New Game →
+infinite load.
 
-## Root causes
-
-The mod was built *inside* a 120-mod load order and its world data exported *from a
-live save*, then its newest content was appended in a legacy binary format.
+## Root causes found in v3.5
 
 | # | Problem | Severity |
 | --- | --- | --- |
@@ -40,123 +40,154 @@ live save*, then its newest content was appended in a legacy binary format.
 | F11 | Header description contradicted the data | minor |
 | F12 | No `.gitattributes` protecting the binaries | minor |
 
+And one found only by auditing the repair itself:
+
+| # | Problem | Severity |
+| --- | --- | --- |
+| F13 | Names inside edit records reflect Ian's **modded session**, not vanilla — rebirth.mod renames vanilla records wholesale, so a record labeled "Black scratch" can really be the Southern Hive | critical |
+
+## The verification method (why the IDs can be trusted)
+
+The repair never invents an ID. Sources, in order of strength:
+
+1. **Byte-exact round trip.** The parser reproduces the original 1,931,263-byte
+   file identically, proving the format model is exact before anything is edited.
+2. **Ian's own data.** Materials, buildings, weapons and packages are reused from
+   references Ian himself made elsewhere in the file (e.g. the Sunward Robe
+   already uses vanilla material `3060-gamedata.base`).
+3. **The Polish base-game translation** (`flatrepo/kenshi_pl`, an FCS
+   `.translation` file keyed by vanilla stringIDs) as an independent witness of
+   what each vanilla ID really is.
+4. **The two-source rule (because of F13):** any *load-bearing* vanilla ID must
+   have Ian's label and the translation agree. This rule caught a live bug in
+   round 1 of this very repair: the start town had been set to
+   `1032-gamedata.base` trusting Ian's "Black scratch" label — the translation
+   proved 1032 is **"Południowy Rój", the Southern Hive**, a town that attacks
+   visitors on sight. The verified replacement is `1082-gamedata.base`
+   (Ian: "Flats lagoon" / PL: "Płaska Laguna" — agreement).
+
+Anything that could not be verified (the hire-dialogue effect encoding, vanilla
+race appearance lists, the sun-system biome identities) was **left out and
+documented in `fcs-worklist.txt`** rather than guessed.
+
 ## What changed
 
 ### F4 — binary format normalised
-The file is `fileType 17`, whose records each carry a byte-length prefix. Records
-1–2740 were correct. At byte offset 1,858,700 the framing changed: the final 66
-records — *the entire v3.5 content drop*, including Lord Ambrose Veil, every Coven
-City resident and shop, the lore books and the Duskfang — were appended by the build
-script in the **old v16 layout**, with a lead value of `0` instead of a byte length
-and the v16 "new record" marker `0x80000002` instead of v17's `0x20`.
-
-All records are now re-serialised with a correct byte-length prefix and change type
-`0x20`. Verified: zero non-conforming records remain.
+Records 1–2740 were correct fileType-17 records (byte-length prefixed). At byte
+1,858,700 the last 66 records — *the entire v3.5 content drop*: Lord Ambrose
+Veil, the Coven City population, shops, lore books, the Duskfang — had been
+appended by the build script in the **old v16 layout** (lead value `0`, change
+type `0x80000002`). All records are re-serialised in conforming v17 framing.
 
 ### F6 / F8 — cut loose from the modlist
-2,457 records existed only to edit *other mods'* records (a scripted pass making
-everything in the author's load order drop blood on death). They cannot apply
-without their parent mods and were removed. 1,531 references that could not resolve
-on a clean install were stripped.
+- Dropped 2,457 records that only edit other mods' records.
+- Stripped 1,531 references that cannot resolve on a clean install.
+- Declared dependencies: **15 declared / ~120 real → 7, all real, all declared**
+  (Ark Haircuts, Newwworld, limbs, rebirth, chareditor, changes_otto,
+  small_changes_otto — all supplying race head/hair/limb data only; see
+  worklist item 2 for the path to zero).
 
-Kept: the mod's own 118 records, 218 edits to vanilla `gamedata.base` records (the
-real feature — blood drops from vanilla characters, vampire recruits in vanilla
-bars, Holy Nation hostility), 8 `gamedata.quack` records and 5 engine-template
-records.
+### F1 / F13 — starts repointed to a two-source-verified town
+Both starts now spawn at **Flats Lagoon** (`1082-gamedata.base`) — the neutral
+Tech Hunter town with a bar and no Holy Nation presence. The description claimed
+the vanilla Hub; no vanilla Hub ID exists anywhere in the mod's data, so the Hub
+remains a ten-second FCS swap if wanted.
 
-Declared dependencies went from **15 declared / ~120 actually needed** to **7,
-all genuinely required and all declared**.
-
-> `gamedata.quack` is treated as base-game content, not a dependency. Its records
-> here are low-id engine data (17, 28–32, 100, 101) used for locational damage and
-> part coverage, referenced by vanilla armour as well as by this mod. Worth a
-> sanity check in FCS.
-
-### F1 — starts repointed
-Both starts pointed at `13-Vampire Race - Blood Feeding.mod` (Coven City). They now
-point at `1032-gamedata.base` — **Black Scratch**, a vanilla town whose id was
-harvested from a `gamedata.base` record inside this very file, so it is guaranteed
-to resolve.
-
-Black Scratch was chosen because it is vanilla, central, lawless, has a bar (so the
-mod's own vampire bar-recruits appear there), and has no Holy Nation presence. The
-Hub would be the thematic choice, but **no vanilla Hub id exists anywhere in the mod
-file** — the only Hub records present belong to Newwworld, UWE and Hub
-Re-Established. Rather than invent an id, the swap was made to a verified one.
-Changing it in FCS is a ten-second job.
+### Sun-burn system — quarantined (new in v3.6.1)
+v3.5 implemented vampire sunlight-burning through the weather system: three
+vanilla **biome records** set to acid 1.0 / weather strength 10, 58 vanilla
+armours given `weather protection1`, 8 animal races made immune. The biome
+records' vanilla identity cannot be verified (F13 — Ian's labels "Central",
+"The Desert", "NONE" are session names), only animals were made immune, and
+vanilla humans have no protection — on a clean install this could acid-burn
+every human in three unknown vanilla regions. All 61 sun-system edits are
+dropped. The Sunward gear remains as normal armour. Rebuild instructions:
+worklist item 4.
 
 ### F2 / F3 / F5 / F7 — savegame terrain removed
-`interiors.level`, `leveldata.level` and all six `zone.*.zone` files were exported
-from a running game session — they are full of `-INGAME` and `-INGAME-S23` ids that
-only exist inside the author's save, referencing mods like *Kenshi Aftermath - Base*
-and *Expanded Cities - The Hub Insane* that were never declared. `interiors.level`
-was a **global** override of every building interior in the game, and
-`zone.20.34.zone` overwrote the Hub's own map cell.
+`interiors.level`, `leveldata.level` and all six zone files carry `-INGAME`
+save-session ids referencing undeclared mods ("Kenshi Aftermath - Base",
+"Expanded Cities - The Hub Insane"). All moved to `original-v3.5/`, nothing
+deleted. Consequence: **Coven City ships dormant** — its records exist but the
+town is not placed in the world.
 
-None of them are shippable. All were moved to `original-v3.5/`. Consequence: Coven
-City is no longer placed in the world.
+### Structural repairs (fallout from the trim, caught by the audit)
+- **14 records cascade-dropped:** the skeleton industrial district (robotics
+  engineer/technician, ironworks/power/battery crews, skeleton recruits) lost
+  its race (`stick_people.mod`) and could never spawn; removing the staff
+  removed their squads and one orphaned vendor list.
+- **9 characters re-armed** with the verified vanilla **Katana**
+  (`476-gamedata.base`, PL-confirmed) — both starting vampires, the four bar
+  recruits, the Vampire Hunter — their weapons had come from `rebirth.mod`.
+- **36 reference repairs** from verified IDs: player-dialogue package
+  `5369-gamedata.base` restored to recruits and thralls (it is what Ian's own
+  wanderer characters use); `Coven Leader Bearing` personality applied to the
+  four wanderer characters; vanilla material `3060` applied to the Sunward
+  leggings/boots, blood items and lore books; Blood Hound now drops Dirty
+  Animal Blood exactly like Ian's vanilla dog/goat edits; dormant-town squads
+  reassigned to vanilla buildings `609`/`772`; the Coven Tavern stocks the
+  seven blood items.
 
-### Structural repairs found during the rebuild
-Two problems were introduced by the trim itself and fixed before shipping:
+### What deliberately did NOT change
+- The **blood economy**: 126 vanilla characters and 8 vanilla animals drop blood
+  on death; vampire recruits appear in the bars of 12 vanilla towns; the Holy
+  Nation is -80 hostile to the Coven and fields Vampire Hunter patrols.
+- The **special-food gate**: Bread/Rice Bowl/Potatoes are `item function 15`
+  and races eat by grant. Note: vanilla Greenlander/Shek edits are missing
+  (Ian's other mods covered them), so on a clean install those races can't eat
+  these three specific foods. Kept because it is Ian's design; see worklist
+  item 3 to complete or revert it.
+- The 12 bar-squad town edits are kept even though some labels are session
+  names (one is really the Southern Hive) — a bar recruit in an unexpected
+  vanilla town is harmless; a missing feature is not.
 
-- **Seven skeleton NPCs lost their race.** Their only `race` reference pointed at
-  `stick_people.mod`. A character with no race has no body to build from, so they
-  and the six squads that existed only to place them were cascade-dropped: the Coven
-  robotics/ironworks/power-station crews and the skeleton recruits. They are Coven
-  City industrial-district flavour, dormant in this build anyway.
-- **Twelve characters lost their only weapon** (it came from `rebirth.mod`),
-  including both starting vampires and every bar recruit. They were re-armed with
-  `2064-gamedata.base`, the vanilla weapon this mod's own author assigns to Coven
-  residents and guards.
-
-### F9 / F10 / F11 / F12 — packaging
-- The mod now sits in a correctly named folder, `Vampire Race - Blood Feeding/`, so
-  the launcher lists it.
-- README with install steps, dependencies and load order.
-- Header description rewritten — the old one claimed both starts used "the vanilla
-  Wanderer's exact Hub spawn configuration", which the data contradicted.
-- `.gitattributes` marks all game files binary so a future contributor's line-ending
-  config cannot corrupt them.
+### F9 – F12 — packaging
+Correct `mods/`-ready folder name, README, truthful header description,
+`.gitattributes` marking game files binary, reproducible build script.
 
 ## Result
 
-| | v3.5 | v3.6 |
+| | v3.5 | v3.6.1 |
 | --- | ---: | ---: |
-| Records | 2,806 | 336 |
-| File size | 1,931,263 bytes | 155,278 bytes |
+| Records | 2,806 | 273 |
+| File size | 1,931,263 bytes | 148,062 bytes |
 | Non-conforming records | 66 | 0 |
 | Mods actually required | ~120 | 7 |
 | Mods declared | 15 | 7 |
-| Shipped savegame terrain files | 8 | 0 |
+| Savegame terrain files shipped | 8 | 0 |
+| Records that touch vanilla balance outside the blood/food design | many | 0 |
 
 ## Verified before commit
 
-- The parser round-trips the original v3.5 file to **1,931,263 identical bytes**,
-  proving the format model is exact rather than approximate.
-- The rebuilt file re-parses cleanly and round-trips.
-- Zero records with a wrong length prefix or a v16 change type.
-- All four playable races still have head meshes (character creation intact).
-- No character left with an empty race list or an empty weapon list.
-- Both game starts survive and point at a resolvable vanilla town.
+- Parser round-trips the original to 1,931,263 identical bytes; the rebuild
+  round-trips too.
+- Zero records with a wrong length prefix or v16 change type.
+- Zero dangling references to own records; zero references to unpublishable
+  private files.
+- All four playable races keep head meshes; no character has an empty race or
+  weapon list; both starts resolve to the two-source-verified Flats Lagoon.
+- Remaining empty reference lists are inert by inspection (vendor blueprint
+  lists, a dog's strafe animation, and the hire-effect gap documented below).
 
-## Still to do
+## Still to do (in priority order — see fcs-worklist.txt for exact steps)
 
-1. **Test on a clean install** — no workshop mods, both starts, walk to Black
-   Scratch, save and reload. This is the one thing no amount of static analysis
-   replaces.
-2. **Reach zero dependencies** — `fcs-worklist.txt` lists all 24 reference lists
-   still pointing at a third-party mod. Every one is on a RACE record (heads, hair,
-   limbs, AI goals). Open each in FCS with `gamedata.base` loaded and swap in the
-   vanilla equivalent. The correct ids can only be read out of `gamedata.base`, so
-   they were deliberately not guessed here.
-3. **Rebuild Coven City** — in the Forgotten Construction Set, on a clean install
-   with only this mod active, from vanilla building parts. Let FCS generate the zone
-   files. Ship only what that clean session produces, and never a wholesale
-   `interiors.level`.
-4. **Optional: compatibility patches.** The 2,457 dropped records were mostly
-   UWE (959), rebirth (314) and Dialogue (222). If you want blood drops from those
-   mods' creatures, re-issue them as separate patch mods
-   ("Blood Feeding × UWE") rather than folding them back into the core.
+1. **Wire up recruit hiring in FCS (~2 min).** The custom hire line's effects
+   lived in `Dialogue.mod` (join squad + 5000-cat fee; original values are
+   documented in the worklist). Until re-added, the vampire recruits in bars
+   talk but cannot be hired.
+2. **Test on a clean install.** No workshop mods: both starts, walk Flats
+   Lagoon, hire attempt, save/reload. Static analysis cannot replace this.
+3. **Race appearance swaps** — 24 lists across the four bloodlines and the
+   Blood Hound still point at the 7 declared mods; swapping in vanilla lists in
+   FCS reaches zero dependencies.
+4. **Decide the special-food gate** — complete it (add Greenlander/Shek grants)
+   or revert the three item-function edits.
+5. **Rebuild Coven City** in FCS from vanilla parts on a clean install; ship
+   only what that session produces.
+6. **Rebuild the sun-burn system** against verified vanilla biomes with proper
+   immunities for non-vampire races.
+7. Optional: re-issue the dropped 2,457 third-party edits as separate
+   compatibility patches ("Blood Feeding × UWE" etc.).
 
 ## Reproducing this build
 
@@ -164,7 +195,7 @@ Two problems were introduced by the trim itself and fixed before shipping:
 python tools/build_fixed.py
 ```
 
-`tools/kenshi_mod.py` is a byte-exact reader/writer for the Kenshi `.mod` format
-(fileType 16 and 17), written for this repair and usable for any future surgery.
-Format notes are in its docstring. Cross-checked against the community reference
-implementation, `Kakrain/KenshiCore`.
+`tools/kenshi_mod.py` is a byte-exact reader/writer for Kenshi `.mod`/`.base`/
+`.translation` files (fileType 16/17), cross-checked against
+`Kakrain/KenshiCore`. The verified-ID mining used the Polish base-game
+translation from `flatrepo/kenshi_pl`.

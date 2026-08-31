@@ -1,81 +1,81 @@
-FCS WORKLIST - the last mile to a zero-dependency build
-================================================================
+FCS WORKLIST - editor tasks this repair could not do from binary alone
+======================================================================
 
-Each line is one reference list that still points at a third-party mod.
-Open the record in FCS with gamedata.base loaded and swap the target for
-the vanilla equivalent. These were left intact because emptying them would
-break character construction, and the correct vanilla IDs are not present
-anywhere in the mod file - they can only be read out of gamedata.base.
+1. RE-WIRE RECRUIT HIRING (the one functional gap; ~2 minutes)
+   The custom hire line "Ok, you're hired." [4021] lost its effects -
+   they lived in Dialogue.mod records. In v3.5 they were:
+      conditions: [51951-Dialogue.mod, value 5000]
+      effects:    [5679-Recruits Dialogue.mod, 0] + [51948-Dialogue.mod, 5000]
+   i.e. require 5000 cats, join squad, deduct 5000. In FCS, open the line
+   and add the vanilla equivalents: condition CO_PLAYER_MONEY >= 5000,
+   effects DA_JOINS_SQUAD_FAST + money deduction, mirroring any vanilla
+   bar-recruit line. Until then the recruits talk but cannot be hired.
 
-RACE         'Blood Hound'  [4091-Vampire Race - Blood Feeding.mod]
-     AI Goals: ['64595-rebirth.mod', '96901-rebirth.mod', '97082-rebirth.mod', '97093-rebirth.mod']
+2. RACE APPEARANCE SWAPS (to reach zero dependencies)
+   Each list below still points at a third-party mod because the vanilla
+   IDs only exist inside gamedata.base. Open each race with gamedata.base
+   loaded and swap in the vanilla list (copy from vanilla Greenlander etc.):
 
-RACE         'Hive'  [5-Vampire Race - Blood Feeding.mod]
-     AI Goals: ['96153-rebirth.mod']
+   RACE         'Blood Hound'  [4091-Vampire Race - Blood Feeding.mod]
+        AI Goals: ['64595-rebirth.mod', '96901-rebirth.mod', '97082-rebirth.mod', '97093-rebirth.mod']
+   RACE         'Hive'  [5-Vampire Race - Blood Feeding.mod]
+        AI Goals: ['96153-rebirth.mod']
+   RACE         'Hive'  [5-Vampire Race - Blood Feeding.mod]
+        heads female: ['18920-small_changes_otto.mod']
+   RACE         'Hive'  [5-Vampire Race - Blood Feeding.mod]
+        heads male: ['18920-small_changes_otto.mod']
+   RACE         'Hive'  [5-Vampire Race - Blood Feeding.mod]
+        limb replacement: ['96796-Newwworld.mod', '96797-Newwworld.mod', '96798-Newwworld.mod', '96799-Newwworld.mod']
+   RACE         'Hive'  [5-Vampire Race - Blood Feeding.mod]
+        severed limbs: ['96901-limbs.mod', '96902-limbs.mod', '96903-limbs.mod', '96904-limbs.mod']
+   RACE         'Human - Greenlander'  [2-Vampire Race - Blood Feeding.mod]
+        AI Goals: ['96153-rebirth.mod']
+   RACE         'Human - Greenlander'  [2-Vampire Race - Blood Feeding.mod]
+        hair colors: ['43405-changes_otto.mod', '43408-changes_otto.mod', '43407-changes_otto.mod', '43410-changes_otto.mod', '43409-changes_otto.mod', '43406-changes_otto.mod']
+   RACE         'Human - Greenlander'  [2-Vampire Race - Blood Feeding.mod]
+        hairs: ['59454-Ark Haircuts.mod', '59456-Ark Haircuts.mod', '59444-Ark Haircuts.mod', '59457-Ark Haircuts.mod', '59445-Ark Haircuts.mod', '59458-Ark Haircuts.mod', '59433-Ark Haircuts.mod', '59459-Ark Haircuts.mod', '59446-Ark Haircuts.mod', '59455-Ark Haircuts.mod', '59447-Ark Haircuts.mod', '59460-Ark Haircuts.mod', '59448-Ark Haircuts.mod', '59461-Ark Haircuts.mod', '59449-Ark Haircuts.mod', '59462-Ark Haircuts.mod', '59450-Ark Haircuts.mod', '59463-Ark Haircuts.mod', '59435-Ark Haircuts.mod', '59451-Ark Haircuts.mod', '59436-Ark Haircuts.mod', '59452-Ark Haircuts.mod', '59437-Ark Haircuts.mod', '59438-Ark Haircuts.mod', '59439-Ark Haircuts.mod', '59440-Ark Haircuts.mod', '59453-Ark Haircuts.mod', '59441-Ark Haircuts.mod', '59442-Ark Haircuts.mod', '59443-Ark Haircuts.mod', '65830-rebirth.mod', '65829-rebirth.mod']
+   RACE         'Human - Greenlander'  [2-Vampire Race - Blood Feeding.mod]
+        heads female: ['42339-changes_otto.mod']
+   RACE         'Human - Greenlander'  [2-Vampire Race - Blood Feeding.mod]
+        heads male: ['99184-Newwworld.mod']
+   RACE         'Human - Greenlander'  [2-Vampire Race - Blood Feeding.mod]
+        limb replacement: ['95510-Newwworld.mod', '95515-Newwworld.mod', '95513-Newwworld.mod', '95514-Newwworld.mod']
+   RACE         'Human - Greenlander'  [2-Vampire Race - Blood Feeding.mod]
+        severed limbs: ['100-limbs.mod', '102-limbs.mod', '101-limbs.mod', '103-limbs.mod']
+   RACE         'Human - Scorchlander'  [3-Vampire Race - Blood Feeding.mod]
+        AI Goals: ['96153-rebirth.mod']
+   RACE         'Human - Scorchlander'  [3-Vampire Race - Blood Feeding.mod]
+        hairs: ['59454-Ark Haircuts.mod', '59456-Ark Haircuts.mod', '59444-Ark Haircuts.mod', '59457-Ark Haircuts.mod', '59445-Ark Haircuts.mod', '59458-Ark Haircuts.mod', '59433-Ark Haircuts.mod', '59459-Ark Haircuts.mod', '59446-Ark Haircuts.mod', '59455-Ark Haircuts.mod', '59447-Ark Haircuts.mod', '59460-Ark Haircuts.mod', '59448-Ark Haircuts.mod', '59461-Ark Haircuts.mod', '59449-Ark Haircuts.mod', '59462-Ark Haircuts.mod', '59450-Ark Haircuts.mod', '59463-Ark Haircuts.mod', '59435-Ark Haircuts.mod', '59451-Ark Haircuts.mod', '59436-Ark Haircuts.mod', '59452-Ark Haircuts.mod', '59437-Ark Haircuts.mod', '59438-Ark Haircuts.mod', '59439-Ark Haircuts.mod', '59440-Ark Haircuts.mod', '59453-Ark Haircuts.mod', '59441-Ark Haircuts.mod', '59442-Ark Haircuts.mod', '59443-Ark Haircuts.mod', '65830-rebirth.mod', '65829-rebirth.mod']
+   RACE         'Human - Scorchlander'  [3-Vampire Race - Blood Feeding.mod]
+        heads female: ['5350-chareditor.mod']
+   RACE         'Human - Scorchlander'  [3-Vampire Race - Blood Feeding.mod]
+        heads male: ['5346-chareditor.mod']
+   RACE         'Human - Scorchlander'  [3-Vampire Race - Blood Feeding.mod]
+        limb replacement: ['95510-Newwworld.mod', '95515-Newwworld.mod', '95513-Newwworld.mod', '95514-Newwworld.mod']
+   RACE         'Human - Scorchlander'  [3-Vampire Race - Blood Feeding.mod]
+        severed limbs: ['100-limbs.mod', '102-limbs.mod', '101-limbs.mod', '103-limbs.mod']
+   RACE         'Shek'  [4-Vampire Race - Blood Feeding.mod]
+        AI Goals: ['96153-rebirth.mod']
+   RACE         'Shek'  [4-Vampire Race - Blood Feeding.mod]
+        heads female: ['5338-chareditor.mod', '5340-chareditor.mod', '5342-chareditor.mod']
+   RACE         'Shek'  [4-Vampire Race - Blood Feeding.mod]
+        heads male: ['5343-chareditor.mod', '5344-chareditor.mod', '5345-chareditor.mod']
+   RACE         'Shek'  [4-Vampire Race - Blood Feeding.mod]
+        limb replacement: ['95510-Newwworld.mod', '95515-Newwworld.mod', '95513-Newwworld.mod', '95514-Newwworld.mod']
+   RACE         'Shek'  [4-Vampire Race - Blood Feeding.mod]
+        severed limbs: ['104-limbs.mod', '106-limbs.mod', '105-limbs.mod', '107-limbs.mod']
 
-RACE         'Hive'  [5-Vampire Race - Blood Feeding.mod]
-     heads female: ['18920-small_changes_otto.mod']
+3. SPECIAL-FOOD GAP (design decision)
+   v3.5 makes Bread [1946], Rice Bowl [1016] and Potatoes [1960] 'special
+   food' (item function 15) and grants eating rights per race. Vanilla
+   Greenlander/Shek/Hive Prince edits are missing (Ian's other mods covered
+   them), so on a clean install those races cannot eat these three foods.
+   Either add 'special food' entries for them in FCS, or revert the three
+   item-function edits to disable the gate.
 
-RACE         'Hive'  [5-Vampire Race - Blood Feeding.mod]
-     heads male: ['18920-small_changes_otto.mod']
-
-RACE         'Hive'  [5-Vampire Race - Blood Feeding.mod]
-     limb replacement: ['96796-Newwworld.mod', '96797-Newwworld.mod', '96798-Newwworld.mod', '96799-Newwworld.mod']
-
-RACE         'Hive'  [5-Vampire Race - Blood Feeding.mod]
-     severed limbs: ['96901-limbs.mod', '96902-limbs.mod', '96903-limbs.mod', '96904-limbs.mod']
-
-RACE         'Human - Greenlander'  [2-Vampire Race - Blood Feeding.mod]
-     AI Goals: ['96153-rebirth.mod']
-
-RACE         'Human - Greenlander'  [2-Vampire Race - Blood Feeding.mod]
-     hair colors: ['43405-changes_otto.mod', '43408-changes_otto.mod', '43407-changes_otto.mod', '43410-changes_otto.mod', '43409-changes_otto.mod', '43406-changes_otto.mod']
-
-RACE         'Human - Greenlander'  [2-Vampire Race - Blood Feeding.mod]
-     hairs: ['59454-Ark Haircuts.mod', '59456-Ark Haircuts.mod', '59444-Ark Haircuts.mod', '59457-Ark Haircuts.mod', '59445-Ark Haircuts.mod', '59458-Ark Haircuts.mod', '59433-Ark Haircuts.mod', '59459-Ark Haircuts.mod', '59446-Ark Haircuts.mod', '59455-Ark Haircuts.mod', '59447-Ark Haircuts.mod', '59460-Ark Haircuts.mod', '59448-Ark Haircuts.mod', '59461-Ark Haircuts.mod', '59449-Ark Haircuts.mod', '59462-Ark Haircuts.mod', '59450-Ark Haircuts.mod', '59463-Ark Haircuts.mod', '59435-Ark Haircuts.mod', '59451-Ark Haircuts.mod', '59436-Ark Haircuts.mod', '59452-Ark Haircuts.mod', '59437-Ark Haircuts.mod', '59438-Ark Haircuts.mod', '59439-Ark Haircuts.mod', '59440-Ark Haircuts.mod', '59453-Ark Haircuts.mod', '59441-Ark Haircuts.mod', '59442-Ark Haircuts.mod', '59443-Ark Haircuts.mod', '65830-rebirth.mod', '65829-rebirth.mod']
-
-RACE         'Human - Greenlander'  [2-Vampire Race - Blood Feeding.mod]
-     heads female: ['42339-changes_otto.mod']
-
-RACE         'Human - Greenlander'  [2-Vampire Race - Blood Feeding.mod]
-     heads male: ['99184-Newwworld.mod']
-
-RACE         'Human - Greenlander'  [2-Vampire Race - Blood Feeding.mod]
-     limb replacement: ['95510-Newwworld.mod', '95515-Newwworld.mod', '95513-Newwworld.mod', '95514-Newwworld.mod']
-
-RACE         'Human - Greenlander'  [2-Vampire Race - Blood Feeding.mod]
-     severed limbs: ['100-limbs.mod', '102-limbs.mod', '101-limbs.mod', '103-limbs.mod']
-
-RACE         'Human - Scorchlander'  [3-Vampire Race - Blood Feeding.mod]
-     AI Goals: ['96153-rebirth.mod']
-
-RACE         'Human - Scorchlander'  [3-Vampire Race - Blood Feeding.mod]
-     hairs: ['59454-Ark Haircuts.mod', '59456-Ark Haircuts.mod', '59444-Ark Haircuts.mod', '59457-Ark Haircuts.mod', '59445-Ark Haircuts.mod', '59458-Ark Haircuts.mod', '59433-Ark Haircuts.mod', '59459-Ark Haircuts.mod', '59446-Ark Haircuts.mod', '59455-Ark Haircuts.mod', '59447-Ark Haircuts.mod', '59460-Ark Haircuts.mod', '59448-Ark Haircuts.mod', '59461-Ark Haircuts.mod', '59449-Ark Haircuts.mod', '59462-Ark Haircuts.mod', '59450-Ark Haircuts.mod', '59463-Ark Haircuts.mod', '59435-Ark Haircuts.mod', '59451-Ark Haircuts.mod', '59436-Ark Haircuts.mod', '59452-Ark Haircuts.mod', '59437-Ark Haircuts.mod', '59438-Ark Haircuts.mod', '59439-Ark Haircuts.mod', '59440-Ark Haircuts.mod', '59453-Ark Haircuts.mod', '59441-Ark Haircuts.mod', '59442-Ark Haircuts.mod', '59443-Ark Haircuts.mod', '65830-rebirth.mod', '65829-rebirth.mod']
-
-RACE         'Human - Scorchlander'  [3-Vampire Race - Blood Feeding.mod]
-     heads female: ['5350-chareditor.mod']
-
-RACE         'Human - Scorchlander'  [3-Vampire Race - Blood Feeding.mod]
-     heads male: ['5346-chareditor.mod']
-
-RACE         'Human - Scorchlander'  [3-Vampire Race - Blood Feeding.mod]
-     limb replacement: ['95510-Newwworld.mod', '95515-Newwworld.mod', '95513-Newwworld.mod', '95514-Newwworld.mod']
-
-RACE         'Human - Scorchlander'  [3-Vampire Race - Blood Feeding.mod]
-     severed limbs: ['100-limbs.mod', '102-limbs.mod', '101-limbs.mod', '103-limbs.mod']
-
-RACE         'Shek'  [4-Vampire Race - Blood Feeding.mod]
-     AI Goals: ['96153-rebirth.mod']
-
-RACE         'Shek'  [4-Vampire Race - Blood Feeding.mod]
-     heads female: ['5338-chareditor.mod', '5340-chareditor.mod', '5342-chareditor.mod']
-
-RACE         'Shek'  [4-Vampire Race - Blood Feeding.mod]
-     heads male: ['5343-chareditor.mod', '5344-chareditor.mod', '5345-chareditor.mod']
-
-RACE         'Shek'  [4-Vampire Race - Blood Feeding.mod]
-     limb replacement: ['95510-Newwworld.mod', '95515-Newwworld.mod', '95513-Newwworld.mod', '95514-Newwworld.mod']
-
-RACE         'Shek'  [4-Vampire Race - Blood Feeding.mod]
-     severed limbs: ['104-limbs.mod', '106-limbs.mod', '105-limbs.mod', '107-limbs.mod']
-
+4. SUN-BURN SYSTEM (quarantined in v3.6.1)
+   v3.5 set acid 1.0 / weather strength 10 on biome records 18001/18002/
+   18003 and weather protection on 58 armours. Those biome IDs' vanilla
+   identity could not be verified (Ian's world was renamed by rebirth.mod),
+   and only 8 animal races were made immune - vanilla humans would burn.
+   Rebuild in FCS against verified vanilla biomes with proper immunities.

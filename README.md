@@ -3,9 +3,10 @@
 Four playable vampire bloodlines for Kenshi, a blood-feeding metabolism, the Coven
 faction, vampire hunters, and vampire recruits in bars across the world.
 
-**This branch (`Fable-changes`) contains a repaired v3.6 build.** The v3.5 upload on
-`main` does not load on anyone's machine but the author's. See [FIXES.md](FIXES.md)
-for what was wrong and exactly what changed.
+**This branch (`Fable-changes`) contains a repaired v3.6.1 build.** The v3.5 upload
+on `main` does not load on anyone's machine but the author's. See
+[FIXES.md](FIXES.md) for what was wrong, exactly what changed, and how every
+replacement ID was verified.
 
 ---
 
@@ -51,24 +52,34 @@ Set — see [fcs-worklist.txt](fcs-worklist.txt) for the exact 24 swaps.
 ## What you get
 
 - **Two starts** — *Wandering Vampire* (one vampire, alone) and *Vampire Coven*
-  (thirteen vampires, fully customisable). Both begin at **Black Scratch**.
+  (thirteen vampires, fully customisable). Both begin at **Flats Lagoon**, the
+  neutral Tech Hunter town.
 - **Four bloodlines** — Greenlander, Scorchlander, Shek and Hive, each with rapid
   healing, reduced bleeding, and a metabolism that demands blood.
 - **Blood as a resource** — human, Shek, Hive, animal and insect blood, dropped by
   the living across the world.
 - **The Coven** — a vampire faction, with Holy Nation hostility baked in.
 - **Vampire hunters** — roaming patrols that want you dead.
-- **Recruits in bars** — vampires of each bloodline, hireable in taverns.
+- **Recruits in bars** — vampires of each bloodline appear in taverns. *Hiring
+  them needs one two-minute FCS edit first — see item 1 of
+  [fcs-worklist.txt](fcs-worklist.txt).*
 - **Sunward daywear** — cowl, robe, leggings and boots.
 - **Lore books** and the **Duskfang** nodachi.
 
 ## Not in this build
 
-**Coven City.** The town's records ship dormant — the faction, Lord Ambrose Veil,
-the garrison, shops, tavern and archive all exist in the data, but the town is not
-placed in the world. The v3.5 terrain files that placed it were exported from a live
-save and cannot work on another machine; rebuilding the town in the Forgotten
-Construction Set is the remaining work. See [FIXES.md](FIXES.md) §"Still to do".
+- **Coven City** ships dormant — Lord Ambrose Veil, the garrison, shops, tavern
+  and archive all exist in the data, but the town is not placed in the world. The
+  v3.5 terrain files that placed it were exported from a live save and cannot work
+  on another machine; the town needs a clean FCS rebuild.
+- **The sunlight-burn system** is quarantined. v3.5 implemented it by making three
+  vanilla biomes acidic, but those biome IDs' vanilla identity could not be
+  verified and vanilla humans were given no protection — on a clean install it
+  could have acid-burned entire regions. Rebuild notes are in the worklist.
+- **The skeleton industrial district** (robotics shop, ironworks, power station
+  crews) was removed: its NPCs' race came from a mod that cannot ship.
+
+Details and rationale: [FIXES.md](FIXES.md) §"Still to do".
 
 ## Repository layout
 
