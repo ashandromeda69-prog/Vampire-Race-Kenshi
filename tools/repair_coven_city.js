@@ -11,6 +11,14 @@
 const fs = require('fs');
 const path = require('path');
 
+const THIRD_PARTY_BUILDING_MODS = new Set([
+  'Forgotten Buildings.mod',
+  'Extra Buildings.mod',
+  'Universal Wasteland Expansion.mod',
+  'Sensible Training.mod',
+  'Cheat crossbow training.mod',
+]);
+
 class Reader {
   constructor(buffer) {
     this.buffer = buffer;
@@ -107,6 +115,7 @@ function parseBuffer(buffer) {
 
   const lastIdOffset = reader.offset;
   const lastId = reader.int();
+  const itemCountOffset = reader.offset;
   const itemCount = reader.int();
   const items = [];
 
@@ -183,6 +192,7 @@ function parseBuffer(buffer) {
     type,
     lastId,
     lastIdOffset,
+    itemCountOffset,
     itemCount,
     items,
     parsedEnd: reader.offset,
@@ -295,16 +305,22 @@ function serializeItem(item, fileType) {
   return result;
 }
 
-function writeModifiedFile(filePath, parsed, modifiedItems, directEdits = []) {
+function writeModifiedFile(filePath, parsed, modifiedItems, directEdits = [], removedItems = new Set()) {
   const parts = [];
   let offset = 0;
   for (const item of parsed.items) {
     parts.push(parsed.buffer.subarray(offset, item.start));
-    parts.push(modifiedItems.has(item) ? serializeItem(item, parsed.type) : parsed.buffer.subarray(item.start, item.end));
+    if (!removedItems.has(item)) {
+      parts.push(modifiedItems.has(item) ? serializeItem(item, parsed.type) : parsed.buffer.subarray(item.start, item.end));
+    }
     offset = item.end;
   }
   parts.push(parsed.buffer.subarray(offset));
   const output = Buffer.concat(parts);
+
+  if (removedItems.size > 0) {
+    output.writeInt32LE(parsed.itemCount - removedItems.size, parsed.itemCountOffset);
+  }
 
   for (const edit of directEdits) {
     edit(output);
@@ -314,6 +330,20 @@ function writeModifiedFile(filePath, parsed, modifiedItems, directEdits = []) {
 
 function findReference(item, categoryName) {
   return item.references.find(category => category.name === categoryName);
+}
+
+function sourceMod(stringId) {
+  return stringId.replace(/^\d+-/, '');
+}
+
+function itemUsesThirdPartyBuildingData(item) {
+  const values = item.dictionaries.flat()
+    .map(entry => entry.value)
+    .filter(value => typeof value === 'string');
+  const referenceIds = item.references.flatMap(category => category.entries.map(entry => entry.id));
+  const instanceIds = item.instances.flatMap(instance => [instance.id, instance.targetId]);
+  return [...values, ...referenceIds, ...instanceIds]
+    .some(stringId => THIRD_PARTY_BUILDING_MODS.has(sourceMod(stringId)));
 }
 
 function repairMod(filePath) {
@@ -425,6 +455,7 @@ function repairZone(filePath) {
   }
 
   const modified = new Set();
+  const removed = new Set();
   let ownerFieldsChanged = 0;
   for (const item of parsed.items) {
     if (
@@ -447,10 +478,48 @@ function repairZone(filePath) {
     }
   }
 
-  if (modified.size > 0) {
-    writeModifiedFile(filePath, parsed, modified);
+  const buildingList = parsed.items.find(item => item.typeId === 30 && item.stringId === '0-buildinglist');
+  if (!buildingList) {
+    throw new Error(`${filePath} has no building list`);
   }
-  return {buildingsChanged: modified.size, ownerFieldsChanged};
+  const thirdPartyBuildings = buildingList.instances.filter(instance =>
+    instance.id.includes('Vampire Race - Blood Feeding') &&
+    THIRD_PARTY_BUILDING_MODS.has(sourceMod(instance.targetId)),
+  );
+  const thirdPartyBuildingIds = new Set(thirdPartyBuildings.map(instance => instance.id));
+  if (thirdPartyBuildings.length > 0) {
+    buildingList.instances = buildingList.instances.filter(instance => !thirdPartyBuildingIds.has(instance.id));
+    modified.add(buildingList);
+  }
+
+  const stateIds = new Set([...thirdPartyBuildingIds].map(stringId => `${stringId}-S23`));
+  const buildingStateRecords = parsed.items.filter(item => item.typeId === 35 && stateIds.has(item.stringId));
+  if (buildingStateRecords.length !== thirdPartyBuildings.length) {
+    throw new Error(
+      `${filePath} has ${thirdPartyBuildings.length} targeted buildings but ` +
+      `${buildingStateRecords.length} matching state records`,
+    );
+  }
+  buildingStateRecords.forEach(item => removed.add(item));
+
+  const orphanedThirdPartyRecords = parsed.items.filter(item =>
+    item !== buildingList &&
+    !removed.has(item) &&
+    item.stringId.includes('Vampire Race - Blood Feeding') &&
+    itemUsesThirdPartyBuildingData(item),
+  );
+  orphanedThirdPartyRecords.forEach(item => removed.add(item));
+
+  if (modified.size > 0 || removed.size > 0) {
+    writeModifiedFile(filePath, parsed, modified, [], removed);
+  }
+  return {
+    buildingsChanged: modified.size,
+    ownerFieldsChanged,
+    removedThirdPartyBuildings: thirdPartyBuildings.length,
+    removedBuildingStateRecords: buildingStateRecords.length,
+    removedOrphanedRecords: orphanedThirdPartyRecords.length,
+  };
 }
 
 function repairInteriors(filePath) {
@@ -525,6 +594,23 @@ function verifyZone(filePath) {
   if (badOwners.length !== 0) {
     throw new Error(`${filePath} still contains ${badOwners.length} mis-owned Coven buildings`);
   }
+  const remainingThirdPartyBuildings = parsed.items
+    .filter(item => item.typeId === 30 && item.stringId === '0-buildinglist')
+    .flatMap(item => item.instances)
+    .filter(instance =>
+      instance.id.includes('Vampire Race - Blood Feeding') &&
+      THIRD_PARTY_BUILDING_MODS.has(sourceMod(instance.targetId)),
+    );
+  if (remainingThirdPartyBuildings.length !== 0) {
+    throw new Error(`${filePath} still contains ${remainingThirdPartyBuildings.length} third-party Coven buildings`);
+  }
+  const remainingThirdPartyRecords = parsed.items.filter(item =>
+    item.stringId.includes('Vampire Race - Blood Feeding') &&
+    itemUsesThirdPartyBuildingData(item),
+  );
+  if (remainingThirdPartyRecords.length !== 0) {
+    throw new Error(`${filePath} still contains ${remainingThirdPartyRecords.length} third-party Coven records`);
+  }
 }
 
 function verifyInteriors(filePath) {
@@ -552,6 +638,11 @@ function main() {
     file: path.basename(filePath),
     ...repairZone(filePath),
   }));
+  const removedThirdPartyBuildings = zoneResults
+    .reduce((sum, result) => sum + result.removedThirdPartyBuildings, 0);
+  if (removedThirdPartyBuildings !== 0 && removedThirdPartyBuildings !== 43) {
+    throw new Error(`Expected to remove 0 or 43 third-party Coven buildings, removed ${removedThirdPartyBuildings}`);
+  }
   const interiorsResult = repairInteriors(interiorsPath);
 
   verifyMod(modPath);
