@@ -4,6 +4,18 @@ This branch contains conservative binary repairs for the Coven City stream-in
 crash. The files were parsed and rewritten as Kenshi records; untouched records
 and level-data tails were preserved byte-for-byte.
 
+## Installing the test branch on Windows
+
+1. Download the `Chatgpt-changes` branch as a ZIP and extract it.
+2. Close Kenshi and its launcher.
+3. Double-click `install_chatgpt_changes.bat` in the extracted folder.
+
+The installer locates Steam/Kenshi, backs up any existing
+`Vampire Race - Blood Feeding` mod folder, installs only the runtime files under
+the exact folder name Kenshi requires, and verifies every copied file by SHA-256.
+If Kenshi is in a nonstandard location and cannot be detected, the installer
+will ask for the folder containing `kenshi_x64.exe`.
+
 ## Applied repairs
 
 - Assigned valid races to all 17 custom humanoid character templates that had

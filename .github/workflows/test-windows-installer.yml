@@ -1,0 +1,65 @@
+name: Test Windows installer
+
+on:
+  push:
+    branches:
+      - Chatgpt-changes
+    paths:
+      - install_chatgpt_changes.bat
+      - install_chatgpt_changes.ps1
+      - .github/workflows/test-windows-installer.yml
+  workflow_dispatch:
+
+jobs:
+  install-into-mock-kenshi:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run installer and verify backup
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $modName = "Vampire Race - Blood Feeding"
+          $mockKenshi = Join-Path $env:RUNNER_TEMP "Kenshi"
+          $modsPath = Join-Path $mockKenshi "mods"
+          $oldModPath = Join-Path $modsPath $modName
+
+          New-Item -ItemType Directory -Path $oldModPath | Out-Null
+          New-Item -ItemType File -Path (Join-Path $mockKenshi "kenshi_x64.exe") | Out-Null
+          Set-Content -LiteralPath (Join-Path $oldModPath "old-version-marker.txt") -Value "preserve me"
+          Set-Content -LiteralPath (Join-Path $oldModPath "zone.20.34.zone") -Value "stale zone"
+
+          & "$env:GITHUB_WORKSPACE\install_chatgpt_changes.ps1" -KenshiPath $mockKenshi
+
+          $requiredFiles = @(
+              "Vampire Race - Blood Feeding.mod",
+              "interiors.level",
+              "leveldata.level",
+              "zone.25.32.zone",
+              "zone.25.33.zone",
+              "zone.26.32.zone",
+              "zone.26.33.zone"
+          )
+          foreach ($file in $requiredFiles) {
+              $source = Join-Path $env:GITHUB_WORKSPACE $file
+              $installed = Join-Path $oldModPath $file
+              if (-not (Test-Path -LiteralPath $installed -PathType Leaf)) {
+                  throw "Installer did not copy $file"
+              }
+              if ((Get-FileHash $source).Hash -ne (Get-FileHash $installed).Hash) {
+                  throw "Installed hash does not match for $file"
+              }
+          }
+
+          if (Test-Path -LiteralPath (Join-Path $oldModPath "zone.20.34.zone")) {
+              throw "A stale deleted zone survived in the fresh mod folder"
+          }
+
+          $backups = @(Get-ChildItem -LiteralPath $modsPath -Directory -Filter "$modName.backup-*")
+          if ($backups.Count -ne 1) {
+              throw "Expected one backup folder, found $($backups.Count)"
+          }
+          if (-not (Test-Path -LiteralPath (Join-Path $backups[0].FullName "old-version-marker.txt"))) {
+              throw "The previous mod version was not preserved in the backup"
+          }
